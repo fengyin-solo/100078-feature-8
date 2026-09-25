@@ -28,6 +28,39 @@ class EntryPayload(BaseModel):
     remark: str | None = None
 
 
+class BatchAssignPayload(BaseModel):
+    """整组派工：勾选的任务编号 + 统一承接单位与计划开工日期。"""
+
+    entry_ids: list[Any] = Field(default_factory=list)
+    承接单位: str = ""
+    计划开工日期: str = ""
+
+
+class BatchAssignPreviewResult(BaseModel):
+    """派工前预演：可派的任务与被拦下（在途/完工/不存在）的任务分组返回。"""
+
+    ok: bool = True
+    message: str = ""
+    dispatchable: list[dict[str, Any]] = Field(default_factory=list)
+    blocked: list[dict[str, Any]] = Field(default_factory=list)
+    dispatchable_count: int = 0
+    blocked_count: int = 0
+    total: int = 0
+
+
+class BatchAssignResult(BaseModel):
+    """整组派工结果：成功、跳过、卡住分开，卡住的条目可带着同一表单单独重试。"""
+
+    ok: bool
+    message: str
+    assigned: list[dict[str, Any]] = Field(default_factory=list)
+    skipped: list[dict[str, Any]] = Field(default_factory=list)
+    failed: list[dict[str, Any]] = Field(default_factory=list)
+    assigned_count: int = 0
+    skipped_count: int = 0
+    failed_count: int = 0
+
+
 
 class RoadEntry(BaseModel):
     """道路设施明细结构。"""
