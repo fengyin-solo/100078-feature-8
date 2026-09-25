@@ -1,11 +1,11 @@
-"""养护施工接口：维护施工任务，覆盖确认开工、提交验收、确认完工等动作。"""
+"""养护施工接口：维护施工任务，覆盖整组指派、确认开工、提交验收、确认完工等动作。"""
 from __future__ import annotations
 
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query
 
-from app.schemas import ActionResult, EntryPayload, PageResult
+from app.schemas import ActionResult, AssignResult, EntryPayload, PageResult
 from app.services.work import WorkService
 
 router = APIRouter(prefix="/api/work", tags=["养护施工"])
@@ -28,6 +28,42 @@ def list_entries(
         raise HTTPException(status_code=400, detail="每页最多 200 条，请缩小分页范围")
     items, total = service.list_entries(keyword=keyword, status=status, page=page, size=size)
     return PageResult(items=items, total=total, page=page, size=size)
+
+
+@router.get("/workload")
+def contractor_workload() -> dict[str, Any]:
+    """承接单位工作量统计：按承接单位汇总各状态施工任务数，与施工任务列表同源。"""
+    items = service.contractor_workload()
+    return {"items": items, "total": len(items)}
+
+
+@router.post("/assign/preview")
+def preview_assign(payload: EntryPayload) -> dict[str, Any]:
+    """整组指派前预检：把存在在途施工、已完工或不存在的任务挑出来，只留能派的。"""
+    return service.preview_assign(payload.values.get("ids"))
+
+
+@router.post("/assign", response_model=AssignResult)
+def assign_entries(payload: EntryPayload) -> AssignResult:
+    """把选中的施工任务整组指派给同一承接单位，并统一计划开工日期。
+
+    逐条处理：每条独立成功或失败，未成功的明细随 results 返回，可单独重试；
+    已成功的不会回滚。ids 只传一个时就是单条派工。
+    """
+    results, error = service.batch_assign(
+        payload.values.get("ids"),
+        payload.values.get("承接单位"),
+        payload.values.get("开工日期"),
+    )
+    if error is not None:
+        return AssignResult(ok=False, message=error)
+    succeeded = sum(1 for item in results if item["ok"])
+    failed = len(results) - succeeded
+    if failed:
+        message = f"已指派 {succeeded} 条，{failed} 条未成功，可单独重试未成功的任务"
+    else:
+        message = f"已整组指派 {succeeded} 条施工任务"
+    return AssignResult(ok=failed == 0, message=message, results=results)
 
 
 @router.get("/{entry_id}", response_model=dict)

@@ -21,6 +21,14 @@ class ActionResult(BaseModel):
     entry: dict[str, Any] | None = None
 
 
+class AssignResult(BaseModel):
+    """整组指派结果：每条任务的成功与否都单列，未成功的可单独重试。"""
+
+    ok: bool
+    message: str
+    results: list[dict[str, Any]] = Field(default_factory=list)
+
+
 class EntryPayload(BaseModel):
     """登记或修改一条业务记录时提交的字段集合。"""
 

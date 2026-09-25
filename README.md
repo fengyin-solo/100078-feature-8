@@ -74,3 +74,7 @@ npm run dev
   `backend/app/routers/<模块>.py`，业务规则在 `backend/app/services/<模块>.py`。
 - 列表接口统一返回 `{ items, total, page, size }`，动作接口统一返回 `{ ok, message }`。
 - 状态流转只允许在 `app/services` 里改，路由层不做业务判断。
+- 养护施工模块另有整组指派接口：`POST /api/work/assign/preview` 指派前预检
+  （把在途、已完工、不存在的任务挑出来）、`POST /api/work/assign` 逐条指派
+  （返回 `{ ok, message, results }`，每条独立成败，未成功的可单独重试）、
+  `GET /api/work/workload` 按承接单位汇总工作量（与施工任务列表同源）。
